@@ -11,9 +11,9 @@ export const sendMail = async (email, subject, html) => {
   });
 
   await transport.sendMail({
-    from: process.env.SMTP_USER,
+    from: `"Battisputali" <${process.env.SMTP_USER}>`,  // Professional email format
     to: email,
     subject,
-    html, // Use the 'html' property for HTML content
+    html, // Email body in HTML format
   });
 };

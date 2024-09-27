@@ -1,30 +1,30 @@
-import { User, Item } from "../models/users.js";
+import { User } from "../models/users.js";
 import { sendMail } from "../utils/sendMail.js";
 import { sendToken } from "../utils/sendToken.js";
 import cloudinary from "cloudinary";
 import fs from "fs";
 import bcrypt from "bcryptjs";
 
+
+// Register a new user and send a welcome email
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
     const avatar = req.files.avatar.tempFilePath;
 
+    // Check if the user already exists
     let user = await User.findOne({ email });
-
     if (user) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User already exists" });
+      return res.status(400).json({ success: false, message: "User already exists" });
     }
 
-    const otp = Math.floor(Math.random() * 1000000);
-
+    // Upload avatar to Cloudinary
     const mycloud = await cloudinary.v2.uploader.upload(avatar);
 
+    // Remove temporary avatar file from server
     fs.rmSync("./tmp", { recursive: true });
 
+    // Create a new user and save to database
     user = await User.create({
       name,
       email,
@@ -33,68 +33,57 @@ export const register = async (req, res) => {
         public_id: mycloud.public_id,
         url: mycloud.secure_url,
       },
-      otp,
-      otp_expiry: new Date(Date.now() + process.env.OTP_EXPIRE * 60 * 1000),
     });
 
-    const emailSubject = "Welcome to Haubaa - Verify Your Account";
+    // Email subject and body for the welcome email
+    const emailSubject = "Welcome to Battisputali - Thank You for Registering!";
     const emailBody = `
       <p>Dear ${name},</p>
       
-      <p>Congratulations! You're one step away from unlocking the full potential of your Haubaa account. We're thrilled to have you on board.</p>
+      <p>We are delighted to welcome you to Battisputali! Your account has been successfully created, and we’re excited to have you as part of our community.</p>
       
-      <p>To ensure the security of your account, please verify your email address by entering the following OTP (One-Time Password) within the next 30 minutes:</p>
+      <p>Feel free to explore our platform, where you can connect, share, and engage with amazing content.</p>
       
-      <h3>Your OTP: ${otp}</h3>
+      <p>If you have any questions, feel free to reach out to our support team.</p>
       
-      <p>This OTP is valid for 30 minutes only, so please make sure to complete the verification process promptly.</p>
-      
-      <p>If you did not create an account with Haubaa, please disregard this email. Your account's security is important to us, and we appreciate your attention to this matter.</p>
-      
-      <p>Thank you for choosing Haubaa! We look forward to providing you with a seamless and secure experience.</p>
-      
-
       <h4>Best regards,</h4>
-      <p>The Haubaa Team</p>
+      <p>The Battisputali Team</p>
     `;
 
-    // Use the email content in your sendMail function
+    // Send the welcome email
     await sendMail(email, emailSubject, emailBody);
 
-    sendToken(
-      res,
-      user,
-      201,
-      "OTP sent to your email, please verify your account"
-    );
+    // Respond to client with success message and token
+    sendToken(res, user, 201, "Registration successful! Welcome to Battisputali.");
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const verify = async (req, res) => {
-  try {
-    const otp = Number(req.body.otp);
 
-    const user = await User.findById(req.user._id);
+// export const verify = async (req, res) => {
+//   try {
+//     const otp = Number(req.body.otp);
 
-    if (user.otp !== otp || user.otp_expiry < Date.now()) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid OTP or has been Expired" });
-    }
+//     const user = await User.findById(req.user._id);
 
-    user.verified = true;
-    user.otp = null;
-    user.otp_expiry = null;
+//     if (user.otp !== otp || user.otp_expiry < Date.now()) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Invalid OTP or has been Expired" });
+//     }
 
-    await user.save();
+//     user.verified = true;
+//     user.otp = null;
+//     user.otp_expiry = null;
 
-    sendToken(res, user, 200, "Account Verified");
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+//     await user.save();
+
+//     sendToken(res, user, 200, "Account Verified");
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 
 export const login = async (req, res) => {
   try {

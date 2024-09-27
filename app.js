@@ -1,24 +1,27 @@
 import express from "express";
-import User from "./routers/User.js";
+import User from "./routers/User.js";  // Single router for user and video routes
 import cookieParser from "cookie-parser";
-import fileUpload from "express-fileupload";
 import cors from "cors";
 
+// Initialize Express App
 export const app = express();
 
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(
-  fileUpload({
-    limits: { fileSize: 50 * 1024 * 1024 },
-    useTempFiles: true,
-  })
-);
 app.use(cors());
 
+// Use the single router (User.js)
 app.use("/api/v1", User);
 
+// Health check route
 app.get("/", (req, res) => {
   res.send("Server is working");
+});
+
+// Server listening
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
