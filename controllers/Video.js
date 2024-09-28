@@ -1,4 +1,3 @@
-// controllers/videoController.js
 import cloudinary from "cloudinary";
 import Video from "../models/Video.js";
 import { User } from "../models/users.js";
@@ -16,23 +15,36 @@ export const uploadVideo = async (req, res) => {
       });
     }
 
-    // Upload the video using the file buffer
-    const result = await cloudinary.v2.uploader.upload_large(
-      `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,  // Convert buffer to base64
-      {
-        resource_type: "video",
-        folder: "videos",
-      }
-    );
+    // Log file path and type
+    console.log("File path:", req.file.path);
+    console.log("File type:", req.file.mimetype);
+
+    // Upload the video using the file path (changed from upload_large to upload)
+    const result = await cloudinary.v2.uploader.upload(req.file.path, {
+      resource_type: "video",  // Ensure it's a video
+      folder: "videos",
+    });
+
+    // Log the Cloudinary upload result to debug
+    console.log("Cloudinary Upload Result:", result);
+
+    // Check if Cloudinary returned a valid URL
+    if (!result.secure_url) {
+      return res.status(500).json({
+        success: false,
+        message: "Cloudinary upload failed. No URL returned.",
+      });
+    }
 
     // Create new video document
     const video = new Video({
       title,
-      url: result.secure_url,
+      url: result.secure_url, // This is the secure URL from Cloudinary
       hashtags: hashtags.split(","),
       userId: req.user._id,  // Assuming the user is authenticated
     });
 
+    // Save the video to the database
     await video.save();
 
     // Add video reference to the user model
@@ -40,6 +52,7 @@ export const uploadVideo = async (req, res) => {
     user.videos.push(video._id);
     await user.save();
 
+    // Respond with success
     res.status(201).json({
       success: true,
       message: "Video uploaded successfully.",
@@ -53,6 +66,7 @@ export const uploadVideo = async (req, res) => {
     });
   }
 };
+
 
 // Fetch User Videos
 export const getUserVideos = async (req, res) => {

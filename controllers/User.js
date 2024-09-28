@@ -6,6 +6,12 @@ import fs from "fs";
 import bcrypt from "bcryptjs";
 
 
+import path from 'path';import { fileURLToPath } from 'url';
+
+// Convert `import.meta.url` to a file path for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Register a new user and send a welcome email
 export const register = async (req, res) => {
   try {
@@ -21,10 +27,18 @@ export const register = async (req, res) => {
     // Upload avatar to Cloudinary
     const mycloud = await cloudinary.v2.uploader.upload(avatar);
 
-    // Remove temporary avatar file from server
-    fs.rmSync("./tmp", { recursive: true });
+    // Check if the ./tmp directory exists, and create it if not
+    const tmpDir = path.join(__dirname, '../tmp');
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir);  // Create the tmp directory if it doesn't exist
+    }
 
-    // Create a new user and save to database
+    // Remove the specific temporary avatar file from the server
+    if (fs.existsSync(avatar)) {
+      fs.rmSync(avatar);  // Remove only the specific temp file
+    }
+
+    // Create a new user and save to the database
     user = await User.create({
       name,
       email,
@@ -35,22 +49,16 @@ export const register = async (req, res) => {
       },
     });
 
-    // Email subject and body for the welcome email
+    // Send the welcome email
     const emailSubject = "Welcome to Battisputali - Thank You for Registering!";
     const emailBody = `
       <p>Dear ${name},</p>
-      
       <p>We are delighted to welcome you to Battisputali! Your account has been successfully created, and we’re excited to have you as part of our community.</p>
-      
-      <p>Feel free to explore our platform, where you can connect, share, and engage with amazing content.</p>
-      
       <p>If you have any questions, feel free to reach out to our support team.</p>
-      
       <h4>Best regards,</h4>
       <p>The Battisputali Team</p>
     `;
 
-    // Send the welcome email
     await sendMail(email, emailSubject, emailBody);
 
     // Respond to client with success message and token
