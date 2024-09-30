@@ -12,6 +12,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors());
 
+// // Use file upload middleware
+// app.use(fileUpload({
+//   useTempFiles: true,
+//   tempFileDir: "./tmp/" // Make sure this path exists
+// }));
+
 // Use the single router (User.js)
 app.use("/api/v1", User);
 
